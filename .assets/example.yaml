@@ -1,0 +1,102 @@
+apiVersion: v1
+automountServiceAccountToken: false
+kind: ServiceAccount
+metadata:
+  labels:
+    account: dotnet-kv-test
+  name: dotnet-kv-test
+---
+apiVersion: v1
+data:
+  ASPNETCORE_ENVIRONMENT: Production
+  ASPNETCORE_HTTP_PORTS: "8080"
+kind: ConfigMap
+metadata:
+  name: aspnetcore-config
+---
+apiVersion: v1
+data:
+  AZURE_CLIENT_ID: '{MANAGED_IDENTITY_CLIENT_ID}'
+  KEY_VAULT_URI: https://{KEY VAULT NAME}.vault.azure.net
+  SECRET_NAME: '{SECRET NAME}'
+kind: ConfigMap
+metadata:
+  name: azure-environment-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: dotnet-kv-test
+    service: dotnet-kv-test
+  name: dotnet-kv-test
+spec:
+  ports:
+  - name: https
+    port: 8080
+  selector:
+    app: dotnet-kv-test
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: dotnet-kv-test
+    version: v1
+  name: dotnet-kv-test-v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dotnet-kv-test
+      version: v1
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: dotnet-kv-test
+        version: v1
+    spec:
+      automountServiceAccountToken: false
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: azure-environment-config
+        - configMapRef:
+            name: aspnetcore-config
+        image: '{REGISTRY_PATH}/dotnet-kv-test:1.0.0'
+        imagePullPolicy: Always
+        name: dotnet-container
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: 500m
+            memory: 356Mi
+          requests:
+            cpu: 20m
+            memory: 256Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+          runAsGroup: 1654
+          runAsNonRoot: true
+          runAsUser: 1654
+          seccompProfile:
+            type: RuntimeDefault
+      nodeSelector:
+        KEY: VALUE
+      securityContext:
+        fsGroup: 1654
+        runAsGroup: 1654
+        runAsUser: 1654
+      serviceAccountName: dotnet-kv-test
+      tolerations:
+      - effect: NoSchedule
+        key: KEY
+        value: VALUE

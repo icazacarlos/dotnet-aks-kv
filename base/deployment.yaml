@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dotnet-kv-test-v1
+  labels:
+    app: dotnet-kv-test
+    version: v1
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dotnet-kv-test
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: dotnet-kv-test
+        version: v1
+    spec:
+      automountServiceAccountToken: false
+      serviceAccountName: dotnet-kv-test
+      securityContext:
+        runAsUser: 1654
+        runAsGroup: 1654
+        fsGroup: 1654
+      containers:
+        - name: dotnet-container
+          image: dotnet-kv-test
+          envFrom:
+            - configMapRef:
+                name: azure-environment-config
+            - configMapRef:
+                name: aspnetcore-config
+          resources:
+            limits:
+              memory: 356Mi
+              cpu: 500m
+            requests:
+              memory: 256Mi
+              cpu: 20m
+          securityContext:
+            allowPrivilegeEscalation: false
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 1654
+            runAsNonRoot: true
+            runAsUser: 1654
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080

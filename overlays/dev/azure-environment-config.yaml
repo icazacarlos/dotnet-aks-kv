@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: azure-environment-config
+data:
+  AZURE_CLIENT_ID: '{MANAGED_IDENTITY_CLIENT_ID}'
+  KEY_VAULT_URI: https://{KEY VAULT NAME}.vault.azure.net
+  SECRET_NAME: '{SECRET NAME}'
