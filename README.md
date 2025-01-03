@@ -1,18 +1,15 @@
-# dotnet webapi
+# .NET WebApi
 
 ## Description
 
-ASPNET WebAPI to fetch secrets from Azure Key Vault without using Service Principal.
+ASPNET WebAPI to fetch secrets from Azure Key Vault.
 
-- Deploy environment = AKS Cluster.
-- AKS Cluster is configured with Managed Identity with proper configuration to access Azure Key Vault.
-
-## Create directory layout
+## Create Directory Layout
 ```
 mkdir -p dotnet-aks-kv/src
 ```
 
-## Create project
+## Create Project
 ```
 cd dotnet-aks-kv
 
@@ -23,73 +20,75 @@ dotnet new webapi -o src/Application
 dotnet sln add src/Application/Application.csproj
 ```
 
-## Add dependencies
+## Add Dependencies
 ```
 dotnet add package Azure.Extensions.AspNetCore.Configuration.Secrets
 
 dotnet add package Azure.Identity
 ```
 
-## Restore dependencies
+## Restore Dependencies
 ```
-dotnet restore Application.sln \
+dotnet restore Application.sln --verbosity normal
+```
+
+## Build & Publish
+```
+dotnet publish "src/Application/Application.csproj" \
+   --configuration Release \
+   --no-restore \
+   --output ./dist \
    --verbosity normal
 ```
 
-## Build & publish project
+## Run Application
+
+### Log in to Azure
+
 ```
-dotnet publish "src/Application/Application.csproj" \
-   --configuration Release \
-   --no-restore \
-   --verbosity normal \
-   -p:AssemblyName=Application
+az login
 ```
 
-## Configure environment
+Ensure the developer has the `Key Vault Secrets User` role assigned to access the Key Vault resource.
+
+### Configure Environment Variables
+
+Replace placeholders accordingly before configuring environment variables:
+
 ```
-export ASPNETCORE_HTTP_PORTS=8080
-export AZURE_CLIENT_ID=<Managed Identity Client ID>
-export ASPNETCORE_ENVIRONMENT=Production
-export KEY_VAULT_NAME=<Key Vault Name>
-export KEY_VAULT_URI=https://<Key Vault Name>.vault.azure.net
+export KEY_VAULT_URI=https://<KEY VAULT NAME>.vault.azure.net
+export SECRET_NAME=<SECRET NAME>
 ```
 
-## Clean up
+### Run Application
+
 ```
-rm -rf src/Application/obj; \
-rm -rf src/Application/bin
+dotnet dist/Application.dll
 ```
 
-## Run application
+By default, the application listens on port `8080`, and the hosting environment is set to `Production`.
+
+This behavior can be modified by changing these environment variables:
+
+- `ASPNETCORE_HTTP_PORTS`
+- `ASPNETCORE_ENVIRONMENT`
+
+### Test Application
+
+Execute a simple `curl` request
+
 ```
-dotnet src/Application/bin/Release/net8.0/Application.dll
+curl -s http://localhost:8080/getSecret
 ```
 
-## Client Test
+Example Output:
+
+The response contains the secret name and its current value:
+
 ```
-curl -s http://localhost:8080/weatherforecast | jq . -C
-curl -s http://localhost:8080/clientId
-curl -s http://localhost:8080/clientSecret
-curl -s http://localhost:8080/clientCertificate
+safe-to-delete: 2b8c9cb4-eab0-44c7-be81-d39bf82b7bb2
 ```
 
-## Combo
-```
-rm -rf src/Application/obj; \
-rm -rf src/Application/bin; \
-dotnet restore Application.sln \
-   --verbosity normal; \
-dotnet publish "src/Application/Application.csproj" \
-   --configuration Release \
-   --no-restore \
-   --verbosity normal \
-   -p:AssemblyName=Application; \
-dotnet src/Application/bin/Release/net8.0/Application.dll
-```
+## Run application in Kubernetes
 
-## Docker
-```
-docker build --no-cache -t local/dotnet-aks-kv:latest .
-
-docker run -p 8080:8080 --rm local/dotnet-aks-kv:latest
-```
+Refer to the instructions in the `k8s` branch.
